@@ -1,0 +1,57 @@
+name: github
+enabled: true
+priority: 3
+
+# ★ 语言 —— 决定加载哪套短语规则集 config/phrases/{lang}/
+lang: en
+
+collect:
+  # Scrapy 独立进程运行，由 workflow 的 collect 阶段触发
+  spider: github
+  mode: search              # search | list | detail
+  base_url: "https://api.github.com"
+  page_size: 50
+  max_pages: 5
+  max_results_per_run: 500
+  keyword_source: config    # config | feedback（signal/idea 反哺）
+  keywords:
+    - "feature request"
+    - "is there a tool for"
+    - "alternatives to"
+    - "is there an app that"
+    - "annoying"
+    - "manual"
+    - "spreadsheet"
+    - "spinning my wheels"
+  fetch:
+    method: search_api      # search_api | search_html | feed | detail
+    keyword_strategy: list  # list | feedback（反哺关键词）
+
+anti_bot:
+  user_agents: ${UA_POOL}
+  proxy_pool: ${PROXY_POOL}
+  rate_limit:
+    requests_per_minute: 30
+    delay_between_requests: [1000, 3000]   # ms 随机区间
+  login_state_file: "./state/github_token.txt"
+
+# ★ 采集层硬门槛 —— 写库前执行，不满足直接丢弃（见 5.3.2 ①）
+#   三条规则全部是 OR 关系，满足任一条即通过
+filter:
+  min_likes: 5             # 互动量门槛：likes>=5 或 comments>=3
+  min_comments: 3
+  title_length: [10, 200]   # issue 标题短，可选范围比小红书窄
+  min_body_length: 30      # issue 正文通常更长
+  phrase_filter: true      # 短语规则由 lang 决定加载哪套
+
+# ★ 互动量权重 —— 互动量阈值按平台配置，因各平台指标不齐
+engagement:
+  base: 20            # 该平台"有热度"的基础分
+  likes: 1            # 点赞权重
+  comments: 3         # 评论权重（求助/吐槽特征更强）
+  collects: 0         # GitHub 无收藏
+
+# ★ 游标 —— 语义由该平台的 spider 解释（payload 存什么、怎么比，全在代码里）
+#   这里只配"防漏采"的通用冗余量，与游标结构无关
+cursor:
+  lookback_window: 0     # 水位线往前回退多少（秒）。0 = 不回退

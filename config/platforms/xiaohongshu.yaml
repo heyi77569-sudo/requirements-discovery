@@ -1,0 +1,59 @@
+name: xiaohongshu
+enabled: true
+priority: 3
+
+# ★ 语言 —— 决定加载哪套短语规则集 config/phrases/{lang}/
+lang: zh
+
+collect:
+  # Scrapy 独立进程运行，由 workflow 的 collect 阶段触发
+  spider: xiaohongshu
+  mode: search              # search | list | detail
+  base_url: "https://www.xiaohongshu.com"
+  page_size: 20
+  max_pages: 10
+  max_results_per_run: 500
+  keyword_source: config    # config | feedback（signal/idea 反哺）
+  keywords:
+    - 记账
+    - 对账
+    - 报销
+    - 开票
+    - 求推荐
+    - 太难用了
+    - 有没有好用的
+    - 平替
+    - 效率工具
+    - 自动化
+  fetch:
+    method: search_html     # search_api | search_html | feed | detail
+    keyword_strategy: list  # list | feedback（反哺关键词）
+
+anti_bot:
+  user_agents: ${UA_POOL}
+  proxy_pool: ${PROXY_POOL}
+  rate_limit:
+    requests_per_minute: 12
+    delay_between_requests: [2000, 5000]   # ms 随机区间
+  login_state_file: "./state/xhs_cookies.json"
+
+# ★ 采集层硬门槛 —— 写库前执行，不满足直接丢弃（见 5.3.2 ①）
+#   三条规则全部是 OR 关系，满足任一条即通过
+filter:
+  min_likes: 5             # 互动量门槛：likes>=5 或 comments>=3
+  min_comments: 3
+  title_length: [3, 200]   # 笔记标题短，过短无信息
+  min_body_length: 15      # 正文太短多半是标题党
+  phrase_filter: true      # 短语规则由 lang 决定加载哪套
+
+# ★ 互动量权重 —— 互动量阈值按平台配置，因各平台指标不齐
+engagement:
+  base: 30            # 该平台"有热度"的基础分
+  likes: 1            # 点赞权重
+  comments: 3         # 评论权重（求助/吐槽特征更强）
+  collects: 2         # 收藏权重（部分平台无此指标）
+
+# ★ 游标 —— 语义由该平台的 spider 解释（payload 存什么、怎么比，全在代码里）
+#   这里只配"防漏采"的通用冗余量，与游标结构无关
+cursor:
+  lookback_window: 300   # 水位线往前回退多少（秒）。小红书时间水位线易漏采，留 5 分钟冗余

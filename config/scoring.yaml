@@ -1,0 +1,40 @@
+# 六维评分与框架标记的排序配置。
+#
+# 公式（method: product，默认）：
+#     base  = buyer_income × usage_frequency × alternative_gap
+#           × buyer_unsophistication × buildability × integration_depth
+#     mult  = 命中的框架标记倍数连乘
+#     total = base × mult
+#
+# 切换 method: weighted_sum 后 base 改为六维加权和，mult 不变。
+#
+# 每次改动请同时更新 version —— product_idea.scoring_version 会记录它，
+# 用于区分批次，避免历史 total_score 语义漂移。
+
+version: "1.0.0"
+
+method: product          # product | weighted_sum
+
+# product 模式下不用；weighted_sum 模式下生效
+weights:
+  buyer_income: 2.0
+  usage_frequency: 1.5
+  alternative_gap: 2.0
+  buyer_unsophistication: 1.0
+  buildability: 1.0
+  integration_depth: 1.5
+
+# 框架标记倍数（两种模式都生效）
+#
+# 为什么用乘法而不是加法加成：加法会让"框架全中但六维都是 2 分"的 idea
+# 排在"六维都是 5 分但无框架"的 idea 前面——前者实际不可做。
+# 乘法保证 base 是主导项，框架只做微调。
+multipliers:
+  is_boring_industry: 1.5       # 不价格敏感、无 AI 竞争、极强转介绍
+  is_abandoned_work: 1.4         # 零竞争，空白市场
+  is_already_outsourced: 1.3     # 已有付费验证，只是换供应商
+  has_dual_signal: 1.5           # 该细分已有付费应用 + 内容创作者，需求被反复验证
+  is_intelligence_gap: 1.2       # 目标客户还没开始用 AI，有时间窗
+
+# 入 signal 的最低 LLM 分级
+min_grade_for_signal: [A, B, C]

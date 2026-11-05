@@ -1,0 +1,62 @@
+# Tool / platform signals — the second kind of Tier 2 evidence
+# (parallel to price_signals; either one qualifies).
+#
+# The reference implementation's comment says "need dollar/tool signal to qualify",
+# but it only implemented the dollar half — its PRICE_SIGNALS list contains no
+# tool words. This file supplies the missing half.
+#
+# Rationale: mentioning a concrete tool/service IS demand context, because nobody
+# asks about a tool that doesn't exist.
+#
+# Matching any one of these means "this post points at a specific tool or carrier".
+phrases:
+  # --- generic ---
+  - "software"
+  - "tool"
+  - "app"
+  - "platform"
+  - "system"
+  - "service"
+  - "website"
+  - "plugin"
+  - "extension"
+  - "script"
+  - "api"
+  - "integration"
+
+  # --- specific categories ---
+  - "crm"
+  - "erp"
+  - "saas"
+  - "dashboard"
+  - "spreadsheet"
+  - "excel"
+  - "google sheets"
+  - "database"
+  - "server"
+  - "notion"
+  - "airtable"
+  - "hubspot"
+  - "salesforce"
+  - "quickbooks"
+  - "shopify"
+  - "stripe"
+  - "zapier"
+  - "slack"
+  - "jira"
+  - "trello"
+  - "asana"
+  - "calendly"
+  - "mailchimp"
+  - "zendesk"
+  - "intercom"
+  - "pos system"
+  - "inventory"
+  - "payroll"
+  - "accounting"
+  - "bookkeeping"
+  - "invoicing"
+  - "scheduling"
+  - "expense"
+  - "time tracking"
+  - "project management"

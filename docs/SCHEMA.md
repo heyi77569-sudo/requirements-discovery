@@ -60,7 +60,7 @@
 
 | 表 | 作用 | 写入方 |
 |---|---|---|
-| `raw_posts` | 原始帖子（统一字段，无平台 payload） | crawler |
+| `raw_posts` | 原始帖子（统一字段，无平台原始响应） | crawler |
 | `comments` | 评论（后续阶段） | crawler |
 | `signal` | 分级后的信号（A/B/C）★ | engine/scorer |
 | `product_idea` | 产品机会（含六维评分）★ | engine/cluster |
@@ -120,7 +120,7 @@ CREATE INDEX idx_raw_channel ON raw_posts(platform, channel);
 
 要点：
 
-- **无平台 payload**：完整响应 80%+ 是无用字段，且补不回"当初没存"的新字段；`url` 保留，需要时回源。
+- **不存平台原始响应**：完整响应 80%+ 是无用字段，且补不回"当初没存"的新字段；`url` 保留，需要时回源。
 - **content_hash 不唯一**：同内容同平台多条（转发、重复上架、duplicate issue）是常态，原始层保留全部事实。
 - **scored_at 是"已消费"**：代表行表示已分级；被去重吸收的重复行也置此标记，避免再次送 LLM。
 - 同平台同 `external_id` 重复由 `uk_raw_platform_extid` 拦截。
@@ -302,7 +302,7 @@ CREATE INDEX idx_audit_time ON scorer_audit(created_at DESC);
 | `platform` | VARCHAR(32) | N | |
 | `channel` | VARCHAR(128) | N | 无频道概念用空串（NULL 不参与唯一索引） |
 | `keyword` | VARCHAR(128) | N | |
-| `payload` | TEXT(JSON) | N | 平台自定义，**不透明** |
+| `cursor_state` | TEXT(JSON) | N | 平台自定义，**不透明** |
 | `last_external_id` | VARCHAR(128) | Y | 冗余，便于排查；不作判定依据 |
 | `last_published_at` | TIMESTAMPTZ | Y | 冗余时间水位线 |
 | `updated_at` | TIMESTAMPTZ | N | |
@@ -311,7 +311,7 @@ CREATE INDEX idx_audit_time ON scorer_audit(created_at DESC);
 CREATE UNIQUE INDEX uk_cursor ON crawl_cursor(platform, channel, keyword);
 ```
 
-`payload` 结构由各平台 spider 定义：GitHub 用 `{"last_created_at": "...", "last_issue_id": ...}`（按 `created` 升序搜索，时间水位线 + id 去重）；小红书用时间水位线 + note id；抖音用 max_cursor + 雪花 id。**先写 `raw_posts` 提交事务，再推进游标。**
+`cursor_state` 结构由各平台 spider 定义：GitHub 用 `{"last_created_at": "...", "last_issue_id": ...}`（按 `created` 升序搜索，时间水位线 + id 去重）；小红书用时间水位线 + note id；抖音用 max_cursor + 雪花 id。**先写 `raw_posts` 提交事务，再推进游标。**
 
 ### 3.8 `run_log` — 运行记录
 

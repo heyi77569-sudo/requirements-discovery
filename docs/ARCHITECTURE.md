@@ -129,7 +129,7 @@ scheduler → workflow → { crawler, engine } → storage → config
 | 1 | 归并方式 | LLM 直接归纳，validator + 溯源兜底 | 向量聚类 / 主题模型 | 需要主题级统计 / 可复现聚类，或 signal 超过 10 万 |
 | 2 | 采集接法 | Scrapy 独立进程，Pipeline 直写 `raw_posts` | `CrawlerProcess` 嵌入；httpx 双实现 | 需要统一 async，或平台只剩纯 API |
 | 3 | 归一化 | 平台字段映射在 spider，通用规则在 `core` | 配置化 `field_mapping` | 平台 ≥5 且响应结构高度同质 |
-| 4 | 原始 payload | 不存完整 JSON，只留统一字段 + `url` | 存原始 payload | 平台改版且回源不可行 |
+| 4 | 平台原始响应 | 不存完整 JSON / HTML，只留统一字段 + `url` | 存原始响应 | 平台改版且回源不可行 |
 | 5 | 过滤位置 | 采集层前置，两段式 | 规则召回 + 灰区层 | LLM 成本超预算，且采集层已收紧仍不够 |
 | 6 | 幂等与执行 | 业务标记字段 + 捞一次返回 | 状态机表 / workflow 常驻循环 | 需要跨阶段回滚，或需要准实时 |
 | 7 | 存储 | SQLite + WAL，保留 PG 迁移路径 | PostgreSQL | 锁等待明显 / 超千万 / 多机部署 |
@@ -212,7 +212,7 @@ scheduler → workflow → { crawler, engine } → storage → config
 
 **执行顺序**：查库去重（`platform + external_id`）→ 判定 → 落库。
 
-**增量游标**：`payload` 结构由平台 spider 定义。GitHub Search API 跨 repo 返回结果，issue number **不是全局单调**，因此用 `created` 时间水位线 + issue id：`{"last_created_at": "...", "last_issue_id": ...}`，按 `created` 升序搜索并加 `created:>水位线`；单查询最多 1000 条，超出时按时间窗二分，`lookback_window: 300` 秒重采边界，`external_id` 去重。小红书用时间水位线 + note id；抖音用 max_cursor + 雪花 id。
+**增量游标**：游标状态（`cursor_state`）由平台 spider 定义。GitHub Search API 跨 repo 返回结果，issue number **不是全局单调**，因此用 `created` 时间水位线 + issue id：`{"last_created_at": "...", "last_issue_id": ...}`，按 `created` 升序搜索并加 `created:>水位线`；单查询最多 1000 条，超出时按时间窗二分，`lookback_window: 300` 秒重采边界，`external_id` 去重。小红书用时间水位线 + note id；抖音用 max_cursor + 雪花 id。
 
 硬约束：**写库提交事务后再推进游标**；反过来会永久丢数据。
 
@@ -389,7 +389,7 @@ total = base × mult
 
 | 表 | 作用 | 关键约束 |
 |---|---|---|
-| `raw_posts` | 原始采集（统一字段，无 payload） | `(platform, external_id)` 唯一；`content_hash` 普通索引 |
+| `raw_posts` | 原始采集（统一字段，无原始响应） | `(platform, external_id)` 唯一；`content_hash` 普通索引 |
 | `comments` | 评论（后续阶段） | 独立粒度；不进入当前信号链路 |
 | `signal` | 分级后的信号（A/B/C） | `content_hash` 唯一；`clustered_at` 归并消费 |
 | `product_idea` | 产品机会 + 六维评分 | `total_score` 有索引 |

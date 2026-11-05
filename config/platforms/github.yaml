@@ -54,4 +54,4 @@ engagement:
 # ★ 游标 —— 语义由该平台的 spider 解释（payload 存什么、怎么比，全在代码里）
 #   这里只配"防漏采"的通用冗余量，与游标结构无关
 cursor:
-  lookback_window: 0     # 水位线往前回退多少（秒）。0 = 不回退
+  lookback_window: 300   # Search API 用 created 时间水位线，回退 5 分钟防边界漏采
